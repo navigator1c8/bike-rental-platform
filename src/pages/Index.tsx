@@ -1,7 +1,9 @@
 
+
 import { Layout } from '@/components/Layout';
-import { BikeCard, BikeProps } from '@/components/BikeCard';
+import BikeCard, { BikeProps } from '@/components/BikeCard';
 import { Button } from '@/components/ui/button';
+
 import { Link } from 'react-router-dom';
 
 const Index = () => {

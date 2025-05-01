@@ -12,7 +12,7 @@ export interface BikeProps {
   available: boolean;
 }
 
-export const BikeCard = ({ id, name, type, image, pricePerHour, available }: BikeProps) => {
+const BikeCard = ({ id, name, type, image, pricePerHour, available }: BikeProps) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <Link to={`/product/${id}`}>
@@ -44,3 +44,5 @@ export const BikeCard = ({ id, name, type, image, pricePerHour, available }: Bik
     </div>
   );
 };
+
+export default BikeCard;
