@@ -12,8 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Icon from '@/components/ui/icon';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import OrderDetailsDialog from '@/components/OrderDetailsDialog';
+import InventoryManagement from '@/components/InventoryManagement';
+import MarketingSection from '@/components/MarketingSection';
 
 // Временные данные
 const bikes = [
@@ -29,6 +34,12 @@ const orders = [
   { id: 1002, customer: 'Анна Сидорова', date: '2025-04-26', items: 1, total: 3000, status: 'completed' },
   { id: 1003, customer: 'Петр Иванов', date: '2025-04-27', items: 3, total: 1950, status: 'pending' },
   { id: 1004, customer: 'Елена Смирнова', date: '2025-04-28', items: 1, total: 800, status: 'cancelled' }
+];
+
+const orderItems = [
+  { id: 1, product: 'Горный велосипед XC Pro', quantity: 1, price: 1500, rentalPeriod: '1 день' },
+  { id: 2, product: 'Детский велосипед Kids Fun', quantity: 1, price: 350, rentalPeriod: '2 дня' },
+  { id: 3, product: 'Шлем защитный', quantity: 2, price: 200, rentalPeriod: '1 день' },
 ];
 
 const users = [
@@ -65,7 +76,17 @@ const categoryData = [
   { category: 'Электрические', value: 15 }
 ];
 
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe'];
+
+const pieData = [
+  { name: 'Летний сезон', value: 45 },
+  { name: 'Весенний сезон', value: 25 },
+  { name: 'Осенний сезон', value: 20 },
+  { name: 'Зимний сезон', value: 10 },
+];
+
 const Admin = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [newBike, setNewBike] = useState({
     name: '',
     price: '',
@@ -88,6 +109,8 @@ const Admin = () => {
     currency: 'RUB',
     notificationEmail: 'info@velorent.ru'
   });
+
+  const [showSystemAlert, setShowSystemAlert] = useState(true);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -129,23 +152,53 @@ const Admin = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Панель администратора</h1>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">
-              <Icon name="HelpCircle" className="mr-2 h-4 w-4" />
-              Справка
-            </Button>
-            <Button variant="outline" size="sm">
-              <Icon name="LogOut" className="mr-2 h-4 w-4" />
-              Выйти
-            </Button>
+            <span className="text-sm text-muted-foreground mr-2">admin@velorent.ru</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border">
+                  <Icon name="User" className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Мой профиль</DropdownMenuLabel>
+                <DropdownMenuItem>
+                  <Icon name="UserCog" className="mr-2 h-4 w-4" />
+                  Настройки профиля
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Icon name="HelpCircle" className="mr-2 h-4 w-4" />
+                  Справка
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Icon name="LogOut" className="mr-2 h-4 w-4" />
+                  Выйти
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard">
-          <TabsList className="grid grid-cols-7 mb-8">
+        {showSystemAlert && (
+          <Alert className="mb-6">
+            <Icon name="Info" className="h-4 w-4" />
+            <AlertTitle>Обновление платформы</AlertTitle>
+            <AlertDescription className="flex justify-between items-center">
+              <span>Система обновлена до версии 2.5.0. Ознакомьтесь с новыми функциями в разделе "Маркетинг" и "Склад".</span>
+              <Button variant="ghost" size="sm" onClick={() => setShowSystemAlert(false)}>
+                <Icon name="X" className="h-4 w-4" />
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-9 mb-8">
             <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
             <TabsTrigger value="products">Товары</TabsTrigger>
+            <TabsTrigger value="inventory">Склад</TabsTrigger>
             <TabsTrigger value="orders">Заказы</TabsTrigger>
             <TabsTrigger value="users">Пользователи</TabsTrigger>
+            <TabsTrigger value="marketing">Маркетинг</TabsTrigger>
             <TabsTrigger value="analytics">Аналитика</TabsTrigger>
             <TabsTrigger value="settings">Настройки</TabsTrigger>
             <TabsTrigger value="add">Добавить товар</TabsTrigger>
@@ -160,9 +213,12 @@ const Admin = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboard.totalBikes}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {dashboard.totalRented} в аренде
-                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-muted-foreground">
+                      {dashboard.totalRented} в аренде
+                    </p>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-200">+5%</Badge>
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -172,9 +228,12 @@ const Admin = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboard.totalOrders}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {dashboard.pendingOrders} ожидают обработки
-                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-muted-foreground">
+                      {dashboard.pendingOrders} ожидают обработки
+                    </p>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-200">+12%</Badge>
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -184,9 +243,12 @@ const Admin = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboard.revenue.toLocaleString()} ₽</div>
-                  <p className="text-xs text-muted-foreground">
-                    За последний месяц
-                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-muted-foreground">
+                      За последний месяц
+                    </p>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-200">+18%</Badge>
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -196,9 +258,12 @@ const Admin = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{dashboard.totalUsers}</div>
-                  <p className="text-xs text-muted-foreground">
-                    +12 новых в этом месяце
-                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-muted-foreground">
+                      +12 новых в этом месяце
+                    </p>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-200">+8%</Badge>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -265,68 +330,196 @@ const Admin = () => {
               </Card>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Недавняя активность</CardTitle>
-                <CardDescription>
-                  Последние действия в системе
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center">
-                    <div className="mr-4 bg-green-100 p-2 rounded-full">
-                      <Icon name="CheckCircle" className="h-4 w-4 text-green-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Недавняя активность</CardTitle>
+                  <CardDescription>
+                    Последние действия в системе
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center">
+                      <div className="mr-4 bg-green-100 p-2 rounded-full">
+                        <Icon name="CheckCircle" className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Заказ #1002 выполнен</p>
+                        <p className="text-xs text-muted-foreground">2 часа назад</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">Заказ #1002 выполнен</p>
-                      <p className="text-xs text-muted-foreground">2 часа назад</p>
+                    <div className="flex items-center">
+                      <div className="mr-4 bg-blue-100 p-2 rounded-full">
+                        <Icon name="Plus" className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Добавлен новый велосипед</p>
+                        <p className="text-xs text-muted-foreground">5 часов назад</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="mr-4 bg-yellow-100 p-2 rounded-full">
+                        <Icon name="AlertCircle" className="h-4 w-4 text-yellow-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Новый заказ #1003</p>
+                        <p className="text-xs text-muted-foreground">10 часов назад</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="mr-4 bg-purple-100 p-2 rounded-full">
+                        <Icon name="UserPlus" className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Новый пользователь зарегистрирован</p>
+                        <p className="text-xs text-muted-foreground">1 день назад</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="mr-4 bg-red-100 p-2 rounded-full">
+                        <Icon name="X" className="h-4 w-4 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Заказ #999 отменен</p>
+                        <p className="text-xs text-muted-foreground">2 дня назад</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="mr-4 bg-blue-100 p-2 rounded-full">
-                      <Icon name="Plus" className="h-4 w-4 text-blue-600" />
+                </CardContent>
+                <CardFooter>
+                  <Button variant="outline" size="sm" className="w-full">
+                    Просмотреть всю активность
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Сезонность проката</CardTitle>
+                  <CardDescription>Распределение заказов по сезонам</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[240px] flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Задачи на сегодня</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="task1" />
+                      <label htmlFor="task1" className="text-sm">Обработать новые заказы (5)</label>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">Добавлен новый велосипед</p>
-                      <p className="text-xs text-muted-foreground">5 часов назад</p>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="task2" />
+                      <label htmlFor="task2" className="text-sm">Обновить статусы доставки</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="task3" />
+                      <label htmlFor="task3" className="text-sm">Пополнить запасы на складе</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="task4" />
+                      <label htmlFor="task4" className="text-sm">Подготовить отчет за месяц</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="task5" checked />
+                      <label htmlFor="task5" className="text-sm line-through text-muted-foreground">Запустить маркетинговую кампанию</label>
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="mr-4 bg-yellow-100 p-2 rounded-full">
-                      <Icon name="AlertCircle" className="h-4 w-4 text-yellow-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Новый заказ #1003</p>
-                      <p className="text-xs text-muted-foreground">10 часов назад</p>
-                    </div>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="ghost" size="sm" className="w-full">
+                    <Icon name="Plus" className="mr-2 h-4 w-4" />
+                    Добавить задачу
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Товары с низким запасом</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {bikes
+                      .filter(bike => bike.stock <= 5)
+                      .map(bike => (
+                        <div key={bike.id} className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{bike.name}</p>
+                            <p className="text-xs text-muted-foreground">ID: {bike.id} | Категория: {bike.category}</p>
+                          </div>
+                          <Badge 
+                            className={bike.stock <= 3 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}
+                          >
+                            {bike.stock} шт.
+                          </Badge>
+                        </div>
+                      ))}
                   </div>
-                  <div className="flex items-center">
-                    <div className="mr-4 bg-purple-100 p-2 rounded-full">
-                      <Icon name="UserPlus" className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Новый пользователь зарегистрирован</p>
-                      <p className="text-xs text-muted-foreground">1 день назад</p>
-                    </div>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setActiveTab('inventory')}>
+                    Управление складом
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Заказы, ожидающие обработки</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {orders
+                      .filter(order => order.status === 'pending')
+                      .map(order => (
+                        <div key={order.id} className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Заказ #{order.id}</p>
+                            <p className="text-xs text-muted-foreground">{order.customer} | {order.date}</p>
+                          </div>
+                          <Badge className="bg-yellow-100 text-yellow-800">
+                            {order.total} ₽
+                          </Badge>
+                        </div>
+                      ))}
                   </div>
-                  <div className="flex items-center">
-                    <div className="mr-4 bg-red-100 p-2 rounded-full">
-                      <Icon name="X" className="h-4 w-4 text-red-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Заказ #999 отменен</p>
-                      <p className="text-xs text-muted-foreground">2 дня назад</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" size="sm" className="w-full">
-                  Просмотреть всю активность
-                </Button>
-              </CardFooter>
-            </Card>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setActiveTab('orders')}>
+                    Все заказы
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="products">
@@ -364,7 +557,7 @@ const Admin = () => {
                       <Icon name="FileDown" className="mr-2 h-4 w-4" />
                       Экспорт
                     </Button>
-                    <Button>
+                    <Button onClick={() => setActiveTab('add')}>
                       <Icon name="Plus" className="mr-2 h-4 w-4" />
                       Добавить
                     </Button>
@@ -410,9 +603,27 @@ const Admin = () => {
                           <Button variant="ghost" size="icon">
                             <Icon name="Pencil" className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon">
-                            <Icon name="Trash" className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Icon name="MoreHorizontal" className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Icon name="Copy" className="mr-2 h-4 w-4" />
+                                Дублировать
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Icon name="Archive" className="mr-2 h-4 w-4" />
+                                Архивировать
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600">
+                                <Icon name="Trash" className="mr-2 h-4 w-4" />
+                                Удалить
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -436,6 +647,10 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="inventory">
+            <InventoryManagement />
           </TabsContent>
 
           <TabsContent value="orders">
@@ -501,15 +716,38 @@ const Admin = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon">
-                            <Icon name="Eye" className="h-4 w-4" />
-                          </Button>
+                          <OrderDetailsDialog 
+                            orderId={order.id}
+                            customer={order.customer}
+                            date={order.date}
+                            status={order.status}
+                            items={orderItems}
+                            total={order.total}
+                          />
                           <Button variant="ghost" size="icon">
                             <Icon name="Printer" className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon">
-                            <Icon name="MoreHorizontal" className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Icon name="MoreHorizontal" className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Icon name="Check" className="mr-2 h-4 w-4" />
+                                Пометить как выполненный
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Icon name="Send" className="mr-2 h-4 w-4" />
+                                Отправить уведомление
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600">
+                                <Icon name="XCircle" className="mr-2 h-4 w-4" />
+                                Отменить заказ
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -594,9 +832,27 @@ const Admin = () => {
                           <Button variant="ghost" size="icon">
                             <Icon name="MessageSquare" className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon">
-                            <Icon name="MoreHorizontal" className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Icon name="MoreHorizontal" className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Icon name="ShieldAlert" className="mr-2 h-4 w-4" />
+                                Изменить роль
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Icon name="Ban" className="mr-2 h-4 w-4" />
+                                Заблокировать
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Icon name="RefreshCcw" className="mr-2 h-4 w-4" />
+                                Сбросить пароль
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -604,6 +860,10 @@ const Admin = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="marketing">
+            <MarketingSection />
           </TabsContent>
 
           <TabsContent value="analytics">
@@ -830,11 +1090,24 @@ const Admin = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="logo">Логотип (URL)</Label>
-                      <Input 
-                        id="logo" 
-                        value={siteSettings.logo} 
-                        onChange={(e) => handleSettingsChange('logo', e.target.value)}
-                      />
+                      <div className="flex space-x-2">
+                        <Input 
+                          id="logo" 
+                          value={siteSettings.logo} 
+                          onChange={(e) => handleSettingsChange('logo', e.target.value)}
+                        />
+                        <Button variant="outline" className="shrink-0">Обзор</Button>
+                      </div>
+                      <div className="h-10 w-10 mt-2 border rounded overflow-hidden">
+                        <img 
+                          src={siteSettings.logo} 
+                          alt="Логотип" 
+                          className="h-full w-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.svg';
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -954,6 +1227,26 @@ const Admin = () => {
                       </div>
                     </div>
                   </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-medium">Интеграции</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="googleAnalytics">Google Analytics ID</Label>
+                      <Input 
+                        id="googleAnalytics" 
+                        placeholder="UA-XXXXXXXXX-X" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="yandexMetrika">Яндекс.Метрика ID</Label>
+                      <Input 
+                        id="yandexMetrika" 
+                        placeholder="XXXXXXXX" 
+                      />
+                    </div>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end space-x-2">
@@ -1029,13 +1322,17 @@ const Admin = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="image">URL изображения</Label>
-                    <Input 
-                      id="image" 
-                      name="image" 
-                      value={newBike.image} 
-                      onChange={handleInputChange} 
-                      placeholder="https://example.com/image.jpg" 
-                    />
+                    <div className="flex space-x-2">
+                      <Input 
+                        id="image" 
+                        name="image" 
+                        value={newBike.image} 
+                        onChange={handleInputChange} 
+                        placeholder="https://example.com/image.jpg" 
+                      />
+                      <Button variant="outline" type="button" className="whitespace-nowrap">Загрузить файл</Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Поддерживаемые форматы: JPG, PNG, WEBP. Максимальный размер: 2MB</p>
                   </div>
 
                   <div className="space-y-2">
@@ -1098,9 +1395,13 @@ const Admin = () => {
 
                   <Separator />
 
-                  <div className="flex justify-end">
-                    <Button type="button" variant="outline" className="mr-2">Отмена</Button>
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setActiveTab('products')}>Отмена</Button>
                     <Button type="submit">Добавить велосипед</Button>
+                    <Button type="submit" variant="secondary">
+                      <Icon name="Save" className="mr-2 h-4 w-4" />
+                      Сохранить черновик
+                    </Button>
                   </div>
                 </form>
               </CardContent>
